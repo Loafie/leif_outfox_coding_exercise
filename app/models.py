@@ -9,6 +9,13 @@ class User(Base):
     name = Column(String, unique=True, index=True)
 
 
+class ZipLoc(Base):
+    __tablename__ = "zip_locations"
+    Zip = Column(String, primary_key=True, index=True)
+    Lat = Column(Float)
+    Lon = Column(Float)
+    
+
 class ProviderData(Base):
     __tablename__ = "provider_data"
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)  # optional surrogate key

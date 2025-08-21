@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from .utils import import_pd_from_csv
+from .utils import import_pd_from_csv, import_ziploc_from_csv
 from sqlalchemy.future import select
 from .database import get_db, engine, async_session
 from .models import Base, User, ProviderData
@@ -21,6 +21,8 @@ async def startup():
         await conn.run_sync(Base.metadata.create_all)
     csv_path = os.path.join(os.path.dirname(__file__), "..", "data", "NY_sample_data.csv")
     await import_pd_from_csv(csv_path)
+    csv_path2 = os.path.join(os.path.dirname(__file__), "..", "data", "zips_to_latlon.csv")
+    await import_ziploc_from_csv(csv_path2)
 
 @app.get("/")
 async def root():

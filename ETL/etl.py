@@ -34,3 +34,15 @@ for c in new_df:
 new_df = new_df.rename(columns=renames)
 print(new_df.head())
 new_df.to_csv('NY_sample_data.csv', index=False, encoding='utf-8')
+
+zips = []
+lats = []
+lons = []
+for g in zips_to_geo:
+    zips.append(g)
+    lats.append(zips_to_geo[g][0])
+    lons.append(zips_to_geo[g][1])
+
+
+zips_to_latlon = pd.DataFrame({"Zip": zips, "Lat": lats, "Lon": lons})
+zips_to_latlon.to_csv('zips_to_latlon.csv', index=False, encoding='utf-8')

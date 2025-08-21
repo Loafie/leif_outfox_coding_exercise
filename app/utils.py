@@ -1,5 +1,5 @@
 import csv
-from .models import ProviderData
+from .models import ProviderData, ZipLoc
 from .database import async_session
 
 async def import_pd_from_csv(file_path: str):
@@ -28,4 +28,25 @@ async def import_pd_from_csv(file_path: str):
                         zip_lon=float(row["zip_lon"]) if row["zip_lon"] else None,
                     )
                     session.add(pd)
+        await session.commit()
+
+async def import_ziploc_from_csv(file_path: str):
+    async with async_session() as session:
+        async with session.begin():
+            with open(file_path, newline="") as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    zl = ZipLoc(Zip=row['Zip'], Lat=float(row['Lat']), Lon=float(row['Lon']))
+                    session.add(zl)
+        await session.commit()
+
+
+async def generate_star_ratings():
+    async with async_session() as session:
+        async with session.begin():
+            with open(file_path, newline="") as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    zl = ZipLoc(Zip=row['Zip'], Lat=float(row['Lat']), Lon=float(row['Lon']))
+                    session.add(zl)
         await session.commit()
