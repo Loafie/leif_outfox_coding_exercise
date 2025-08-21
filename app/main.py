@@ -7,6 +7,8 @@ from sqlalchemy.future import select
 from .database import get_db, engine, async_session
 from .models import Base, User, ProviderData, ZipLoc, StarRating
 
+from .prompts import DB_EXPLAIN, PREAMBLE
+
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
@@ -31,12 +33,14 @@ async def startup():
 async def root():
     return {"message": "Hello World"}
 
-@app.get("/ai")
-async def ai(prompt: str):
+@app.get("/ask/")
+async def ai(query: str):
+
+    prompt = PREAMBLE + query + "\n\n" + DB_EXPLAIN
+
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=50
+        model="gpt-4o",
+        messages=[{"role": "user", "content": prompt}]
     )
     return {"response": response.choices[0].message.content}
 
@@ -61,7 +65,7 @@ async def get_providers(zipcode: str = Query(..., min_length=5, max_length=10), 
                 )
             )
         )
-        stmt = select(ProviderData).where(distance_expr <= radius, ProviderData.DRG_Desc.ilike(f"%{drg}%")).order_by(distance_expr).limit(20)
+        stmt = select(ProviderData).where(distance_expr <= radius, ProviderData.DRG_Desc.ilike(f"%{drg}%")).order_by(ProviderData.Avg_Mdcr_Pymt_Amt.desc()).limit(20)
         result = await session.execute(stmt)
         providers = result.scalars().all()  # List[ProviderData]
 
