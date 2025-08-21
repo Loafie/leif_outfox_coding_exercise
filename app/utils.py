@@ -1,5 +1,7 @@
 import csv
-from .models import ProviderData, ZipLoc
+import random
+from sqlalchemy.future import select
+from .models import ProviderData, ZipLoc, StarRating
 from .database import async_session
 
 async def import_pd_from_csv(file_path: str):
@@ -44,9 +46,17 @@ async def import_ziploc_from_csv(file_path: str):
 async def generate_star_ratings():
     async with async_session() as session:
         async with session.begin():
-            with open(file_path, newline="") as csvfile:
-                reader = csv.DictReader(csvfile)
-                for row in reader:
-                    zl = ZipLoc(Zip=row['Zip'], Lat=float(row['Lat']), Lon=float(row['Lon']))
-                    session.add(zl)
+                    # Get all unique Prvdr_CCNs
+            stmt = select(ProviderData.Prvdr_CCN).distinct()
+            result = await session.execute(stmt)
+            unique_ccns = [row[0] for row in result.all()]
+
+            # For each CCN, create a new entry with random_score
+            for ccn in unique_ccns:
+                # Option 1: create new row with random_score only
+                sr = StarRating(
+                    Prvdr_CCN=ccn,
+                    Rating=random.randint(1, 10)
+                )
+                session.add(sr)
         await session.commit()

@@ -14,6 +14,11 @@ class ZipLoc(Base):
     Zip = Column(String, primary_key=True, index=True)
     Lat = Column(Float)
     Lon = Column(Float)
+
+class StarRating(Base):
+    __tablename__ = "star_ratings"
+    Prvdr_CCN = Column(String, primary_key = True, index=True)
+    Rating = Column(Integer)
     
 
 class ProviderData(Base):
