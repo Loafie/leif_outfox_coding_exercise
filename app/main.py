@@ -1,9 +1,11 @@
+import math
+from sqlalchemy import func
 from fastapi import FastAPI, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from .utils import import_pd_from_csv, import_ziploc_from_csv, generate_star_ratings
 from sqlalchemy.future import select
 from .database import get_db, engine, async_session
-from .models import Base, User, ProviderData
+from .models import Base, User, ProviderData, ZipLoc, StarRating
 
 from openai import OpenAI
 import os
@@ -39,13 +41,27 @@ async def ai(prompt: str):
     return {"response": response.choices[0].message.content}
 
 @app.get("/providers/")
-async def get_providers(zipcode: str = Query(..., min_length=5, max_length=10)):
-    """
-    Return up to 10 providers matching the given zipcode.
-    """
-    async with async_session() as session:  # async SQLAlchemy session
-        # Build query
-        stmt = select(ProviderData).where(ProviderData.Prvdr_Zip5 == zipcode).limit(10)
+async def get_providers(zipcode: str = Query(..., min_length=5, max_length=10), drg: str = Query(...), radius: int = Query(25, ge=1, le=200)):
+    async with async_session() as session:  
+        stmt = select(ZipLoc).where(ZipLoc.Zip == zipcode)
+        result = await session.execute(stmt)
+        zip_row = result.scalar_one_or_none()
+        if zip_row is None:
+            return ["Invalid Zip"]  # ZIP does not exist
+        target_lat = zip_row.Lat 
+        target_lon = zip_row.Lon
+
+        distance_expr = (
+            6371 * 2 * func.asin(
+                func.sqrt(
+                    func.pow(func.sin(func.radians(target_lat - ProviderData.zip_lat)/2), 2) +
+                    func.cos(func.radians(ProviderData.zip_lat)) *
+                    func.cos(func.radians(target_lat)) *
+                    func.pow(func.sin(func.radians(target_lon - ProviderData.zip_lon)/2), 2)
+                )
+            )
+        )
+        stmt = select(ProviderData).where(distance_expr <= radius, ProviderData.DRG_Desc.ilike(f"%{drg}%")).order_by(distance_expr).limit(20)
         result = await session.execute(stmt)
         providers = result.scalars().all()  # List[ProviderData]
 
