@@ -1,14 +1,14 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from .database import get_db
-from .models import Base, engine, User
+from .database import get_db, engine
+from .models import Base, User
 
-import openai
+from openai import OpenAI
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI()
 
 app = FastAPI(title="FastAPI + Async SQLAlchemy + PostgreSQL + OpenAI")
 
@@ -24,9 +24,9 @@ async def root():
 
 @app.get("/ai")
 async def ai(prompt: str):
-    response = openai.Completion.create(
-        model="text-davinci-003",
-        prompt=prompt,
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
         max_tokens=50
     )
-    return {"response": response.choices[0].text.strip()}
+    return {"response": response.choices[0].message.content}
