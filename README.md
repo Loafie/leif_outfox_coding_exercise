@@ -5,7 +5,9 @@ __Setup Instructions__
 -docker-compose up --build
 
 -Create a .env file with:
+
   DATABASE_URL=postgresql+asyncpg://postgres:pass123@db:5432/postgres
+  
   OPENAI_API_KEY=<your key>
   
 -Database is automatically populated on FastAPI app start-up
