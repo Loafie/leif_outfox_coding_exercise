@@ -11,21 +11,21 @@ async def import_pd_from_csv(file_path: str):
                 reader = csv.DictReader(csvfile)
                 for row in reader:
                     pd = ProviderData(
-                        Prvdr_CCN=row["Prvdr_CCN"],
-                        Prvdr_Org_Name=row["Prvdr_Org_Name"],
-                        Prvdr_City=row["Prvdr_City"],
-                        Prvdr_St=row["Prvdr_St"],
-                        Prvdr_State_FIPS=row["Prvdr_State_FIPS"],
-                        Prvdr_Zip5=row["Prvdr_Zip5"],
-                        Prvdr_State_Abrvtn=row["Prvdr_State_Abrvtn"],
-                        Prvdr_RUCA=row["Prvdr_RUCA"],
-                        Prvdr_RUCA_Desc=row["Prvdr_RUCA_Desc"],
-                        DRG_Cd=row["DRG_Cd"],
-                        DRG_Desc=row["DRG_Desc"],
-                        Tot_Dschrgs=int(row["Tot_Dschrgs"]) if row["Tot_Dschrgs"] else None,
-                        Avg_Submtd_Cvrd_Chrg=float(row["Avg_Submtd_Cvrd_Chrg"]) if row["Avg_Submtd_Cvrd_Chrg"] else None,
-                        Avg_Tot_Pymt_Amt=float(row["Avg_Tot_Pymt_Amt"]) if row["Avg_Tot_Pymt_Amt"] else None,
-                        Avg_Mdcr_Pymt_Amt=float(row["Avg_Mdcr_Pymt_Amt"]) if row["Avg_Mdcr_Pymt_Amt"] else None,
+                        prvdr_ccn=row["Prvdr_CCN"],
+                        prvdr_org_name=row["Prvdr_Org_Name"],
+                        prvdr_city=row["Prvdr_City"],
+                        prvdr_st=row["Prvdr_St"],
+                        prvdr_state_fips=row["Prvdr_State_FIPS"],
+                        prvdr_zip5=row["Prvdr_Zip5"],
+                        prvdr_state_abrvtn=row["Prvdr_State_Abrvtn"],
+                        prvdr_ruca=row["Prvdr_RUCA"],
+                        prvdr_ruca_desc=row["Prvdr_RUCA_Desc"],
+                        drg_cd=row["DRG_Cd"],
+                        drg_desc=row["DRG_Desc"],
+                        tot_dschrgs=int(row["Tot_Dschrgs"]) if row["Tot_Dschrgs"] else None,
+                        avg_submtd_cvrd_chrg=float(row["Avg_Submtd_Cvrd_Chrg"]) if row["Avg_Submtd_Cvrd_Chrg"] else None,
+                        avg_tot_pymt_amt=float(row["Avg_Tot_Pymt_Amt"]) if row["Avg_Tot_Pymt_Amt"] else None,
+                        avg_mdcr_pymt_amt=float(row["Avg_Mdcr_Pymt_Amt"]) if row["Avg_Mdcr_Pymt_Amt"] else None,
                         zip_lat=float(row["zip_lat"]) if row["zip_lat"] else None,
                         zip_lon=float(row["zip_lon"]) if row["zip_lon"] else None,
                     )
@@ -38,7 +38,7 @@ async def import_ziploc_from_csv(file_path: str):
             with open(file_path, newline="") as csvfile:
                 reader = csv.DictReader(csvfile)
                 for row in reader:
-                    zl = ZipLoc(Zip=row['Zip'], Lat=float(row['Lat']), Lon=float(row['Lon']))
+                    zl = ZipLoc(zip=row['Zip'], lat=float(row['Lat']), lon=float(row['Lon']))
                     session.add(zl)
         await session.commit()
 
@@ -47,7 +47,7 @@ async def generate_star_ratings():
     async with async_session() as session:
         async with session.begin():
                     # Get all unique Prvdr_CCNs
-            stmt = select(ProviderData.Prvdr_CCN).distinct()
+            stmt = select(ProviderData.prvdr_ccn).distinct()
             result = await session.execute(stmt)
             unique_ccns = [row[0] for row in result.all()]
 
@@ -55,8 +55,8 @@ async def generate_star_ratings():
             for ccn in unique_ccns:
                 # Option 1: create new row with random_score only
                 sr = StarRating(
-                    Prvdr_CCN=ccn,
-                    Rating=random.randint(1, 10)
+                    prvdr_ccn=ccn,
+                    rating=random.randint(1, 10)
                 )
                 session.add(sr)
         await session.commit()

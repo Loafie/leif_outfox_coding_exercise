@@ -11,33 +11,33 @@ class User(Base):
 
 class ZipLoc(Base):
     __tablename__ = "zip_locations"
-    Zip = Column(String, primary_key=True, index=True)
-    Lat = Column(Float)
-    Lon = Column(Float)
+    zip = Column(String, primary_key=True, index=True)
+    lat = Column(Float)
+    lon = Column(Float)
 
 class StarRating(Base):
     __tablename__ = "star_ratings"
-    Prvdr_CCN = Column(String, primary_key = True, index=True)
-    Rating = Column(Integer)
+    prvdr_ccn = Column(String, primary_key = True, index=True)
+    rating = Column(Integer)
     
 
 class ProviderData(Base):
     __tablename__ = "provider_data"
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)  # optional surrogate key
-    Prvdr_CCN = Column(String, index=True)
-    Prvdr_Org_Name = Column(String)
-    Prvdr_City = Column(String)
-    Prvdr_St = Column(String)
-    Prvdr_State_FIPS = Column(String)
-    Prvdr_Zip5 = Column(String)
-    Prvdr_State_Abrvtn = Column(String)
-    Prvdr_RUCA = Column(String)
-    Prvdr_RUCA_Desc = Column(String)
-    DRG_Cd = Column(String)
-    DRG_Desc = Column(String)
-    Tot_Dschrgs = Column(Integer)
-    Avg_Submtd_Cvrd_Chrg = Column(Float)
-    Avg_Tot_Pymt_Amt = Column(Float)
-    Avg_Mdcr_Pymt_Amt = Column(Float)
+    prvdr_ccn = Column(String, index=True)
+    prvdr_org_name = Column(String)
+    prvdr_city = Column(String)
+    prvdr_st = Column(String)
+    prvdr_state_fips = Column(String)
+    prvdr_zip5 = Column(String)
+    prvdr_state_abrvtn = Column(String)
+    prvdr_ruca = Column(String)
+    prvdr_ruca_desc = Column(String)
+    drg_cd = Column(String)
+    drg_desc = Column(String)
+    tot_dschrgs = Column(Integer)
+    avg_submtd_cvrd_chrg = Column(Float)
+    avg_tot_pymt_amt = Column(Float)
+    avg_mdcr_pymt_amt = Column(Float)
     zip_lat = Column(Float)
     zip_lon = Column(Float)

@@ -1,13 +1,15 @@
 import math
-from sqlalchemy import func
+from sqlalchemy import func, text
 from fastapi import FastAPI, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from .utils import import_pd_from_csv, import_ziploc_from_csv, generate_star_ratings
 from sqlalchemy.future import select
 from .database import get_db, engine, async_session
 from .models import Base, User, ProviderData, ZipLoc, StarRating
+from fastapi.responses import JSONResponse
+import json
 
-from .prompts import DB_EXPLAIN, PREAMBLE
+from .prompts import DB_EXPLAIN, PREAMBLE, META_AFTER, HAVERSINE_SQL
 
 from openai import OpenAI
 import os
@@ -28,6 +30,9 @@ async def startup():
     csv_path2 = os.path.join(os.path.dirname(__file__), "..", "data", "zips_to_latlon.csv")
     await import_ziploc_from_csv(csv_path2)
     await generate_star_ratings()
+    async with async_session() as session:
+        await session.execute(text(HAVERSINE_SQL))
+        await session.commit()
 
 @app.get("/")
 async def root():
@@ -42,18 +47,32 @@ async def ai(query: str):
         model="gpt-4o",
         messages=[{"role": "user", "content": prompt}]
     )
-    return {"response": response.choices[0].message.content}
+    resp = response.choices[0].message.content.replace("```sql\n","").replace("\n```","")
+    async with async_session() as session:
+        async with session.begin():
+            result = await session.execute(text(resp))
+            rows = [dict(row) for row in result.mappings().all()]
+            # Force rollback so no writes persist to prevent particularly harmful prompt injection
+            await session.rollback()
+            db_resp = JSONResponse(content=rows)
+
+    second_prompt = META_AFTER + "\nINITIAL QUESTION:\n" + query + "\n\nTHE QUERY:\n" + resp + "\n\nDATABASE RESPONSE:\n" + db_resp.body.decode("utf-8") + "\n\nFIRST PROMPT:\n" + prompt
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": second_prompt}]
+    )
+    return [{"Response" : response.choices[0].message.content}]
 
 @app.get("/providers/")
 async def get_providers(zipcode: str = Query(..., min_length=5, max_length=10), drg: str = Query(...), radius: int = Query(25, ge=1, le=200)):
     async with async_session() as session:  
-        stmt = select(ZipLoc).where(ZipLoc.Zip == zipcode)
+        stmt = select(ZipLoc).where(ZipLoc.zip == zipcode)
         result = await session.execute(stmt)
         zip_row = result.scalar_one_or_none()
         if zip_row is None:
             return ["Invalid Zip"]  # ZIP does not exist
-        target_lat = zip_row.Lat 
-        target_lon = zip_row.Lon
+        target_lat = zip_row.lat 
+        target_lon = zip_row.lon
 
         distance_expr = (
             6371 * 2 * func.asin(
@@ -65,28 +84,28 @@ async def get_providers(zipcode: str = Query(..., min_length=5, max_length=10), 
                 )
             )
         )
-        stmt = select(ProviderData).where(distance_expr <= radius, ProviderData.DRG_Desc.ilike(f"%{drg}%")).order_by(ProviderData.Avg_Mdcr_Pymt_Amt.desc()).limit(20)
+        stmt = select(ProviderData).where(distance_expr <= radius, ProviderData.drg_desc.ilike(f"%{drg}%")).order_by(ProviderData.avg_mdcr_pymt_amt.desc()).limit(20)
         result = await session.execute(stmt)
         providers = result.scalars().all()  # List[ProviderData]
 
         # Convert to list of dicts
         return [  # JSON-serializable
             {
-                "Prvdr_CCN": p.Prvdr_CCN,
-                "Prvdr_Org_Name": p.Prvdr_Org_Name,
-                "Prvdr_City": p.Prvdr_City,
-                "Prvdr_St": p.Prvdr_St,
-                "Prvdr_State_FIPS": p.Prvdr_State_FIPS,
-                "Prvdr_Zip5": p.Prvdr_Zip5,
-                "Prvdr_State_Abrvtn": p.Prvdr_State_Abrvtn,
-                "Prvdr_RUCA": p.Prvdr_RUCA,
-                "Prvdr_RUCA_Desc": p.Prvdr_RUCA_Desc,
-                "DRG_Cd": p.DRG_Cd,
-                "DRG_Desc": p.DRG_Desc,
-                "Tot_Dschrgs": p.Tot_Dschrgs,
-                "Avg_Submtd_Cvrd_Chrg": p.Avg_Submtd_Cvrd_Chrg,
-                "Avg_Tot_Pymt_Amt": p.Avg_Tot_Pymt_Amt,
-                "Avg_Mdcr_Pymt_Amt": p.Avg_Mdcr_Pymt_Amt,
+                "prvdr_ccn": p.prvdr_ccn,
+                "prvdr_org_name": p.prvdr_org_name,
+                "prvdr_city": p.prvdr_city,
+                "prvdr_st": p.prvdr_st,
+                "prvdr_state_fips": p.prvdr_state_fips,
+                "prvdr_zip5": p.prvdr_zip5,
+                "prvdr_state_abrvtn": p.prvdr_state_abrvtn,
+                "prvdr_ruca": p.prvdr_ruca,
+                "prvdr_ruca_desc": p.prvdr_ruca_desc,
+                "drg_cd": p.drg_cd,
+                "drg_desc": p.drg_desc,
+                "tot_dschrgs": p.tot_dschrgs,
+                "avg_submtd_cvrd_chrg": p.avg_submtd_cvrd_chrg,
+                "avg_tot_pymt_amt": p.avg_tot_pymt_amt,
+                "avg_mdcr_pymt_amt": p.avg_mdcr_pymt_amt,
                 "zip_lat": p.zip_lat,
                 "zip_lon": p.zip_lon,
             }
